@@ -2,17 +2,17 @@
 % Boiler Plate Wireless Channel
 % BPSK, AWGN monte-carlo simulation
 % plots BER vs. Eb/No with shannon theoretical blah
-close all
+close all; clear all;
 
 M = 2; % constellation order, BPSK
 num_run = 1; % number of runs
 num_sym = 5e5; % number of symbols
-snr_vec = 0:10; % SNR points
+snr_vec = 1:2:20; % SNR points
 ber_uncoded = zeros(size(snr_vec)); % bit error rate vector
 ber_coded   = zeros(size(snr_vec));
 
 global m
-m = 3;
+m = 5;
 r = 1;
 n = 2^m;
 global k
@@ -42,7 +42,7 @@ for ii=1:num_run
   
   % performs experiment at each SNR
   for jj=1:length(snr_vec)
-    rx = tx + 10^(-snr_vec(jj)/20)*v;
+    rx = tx + (1/rate)*10^(-snr_vec(jj)/20)*v;
     % each coded word in columns
     y_enc  = reshape(real(rx)<0, n, []);
     xx = decode(y_enc);
@@ -51,13 +51,12 @@ for ii=1:num_run
     ber_coded(jj) = ber_coded(jj) + sum( abs( x_hat-x ) )/length(x);
     fprintf(".");
   end
-  fprintf(",");
+  fprintf(",\n");
 end
 ber_coded = ber_coded/num_run
 
 % theoretical ber
-ebno = snr_vec - 10*log10(log2(M));
-ebno_coded = ebno - 10*log10(rate);
+ebno = snr_vec - 10*log10(log2(M)) + 10*log10(rate);
 ber_theory = qfunc( sqrt( 2*10.^(ebno/10) ) );
 
 % shannon limit
@@ -67,7 +66,7 @@ coded_limit = 10*log10( (2^rate -1)/rate);
 % plotting
 figure
 % bers
-semilogy(ebno_coded, ber_coded, '-bo', ... 
+semilogy(ebno, ber_coded, '-bo', ... 
     ebno, ber_theory, 'r')
 % limits
 ymin = min(ber_coded(ber_coded~=0));
@@ -76,12 +75,12 @@ line([abs_limit abs_limit], [ymin 1e-3], ...
 line([coded_limit coded_limit], [ymin 1e-3], ...
     'color', [0.5 0 1], 'linestyle', '--')
 title('BPSK over AWGN Channel')
-xlim([ebno_coded(1) ebno_coded(end)])
+xlim([ebno(1) ebno(end)])
 ylim([ymin 1])
 xlabel('Eb/N0 (dB)')
 ylabel('BER')
 %ylim([1e-5 1e-1])
-legend('simulation','theory', ...
+legend('simulation','theory, uncoded', ...
     'abs. Shannon limit', 'Shannon limit, rate: '+string(rate))
 grid on
 

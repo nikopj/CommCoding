@@ -5,7 +5,7 @@
 close all; clear all
 
 M = 2; % constellation order, BPSK
-num_run = 10; % number of runs
+num_run = 1; % number of runs
 num_sym = 5e5; % number of symbols
 snr_vec = 1:16; % SNR points
 ber_coded   = zeros(size(snr_vec));
@@ -53,9 +53,8 @@ end
 ber_coded = ber_coded/num_run;
 
 % theoretical ber
-ebno = snr_vec - 10*log10(log2(M));
-ebno_coded = ebno + 10*log10(rate);
-ber_theory = qfunc( sqrt( 2*10.^(ebno_coded/10) ) );
+ebno = snr_vec - 10*log10(log2(M)) + 10*log10(rate);
+ber_theory = qfunc( sqrt( 2*10.^(ebno/10) ) );
 
 % shannon limit
 abs_limit = 10*log10( log(2) );
@@ -64,8 +63,8 @@ coded_limit = 10*log10( (2^rate -1)/rate);
 % plotting
 figure
 % bers
-semilogy(ebno_coded, ber_coded, '-bo', ... 
-    ebno_coded, ber_theory, 'r')
+semilogy(ebno, ber_coded, '-bo', ... 
+    ebno, ber_theory, 'r')
 % limits
 ymin = min(ber_coded(ber_coded~=0));
 line([abs_limit abs_limit], [ymin 1e-3], ...
@@ -73,12 +72,12 @@ line([abs_limit abs_limit], [ymin 1e-3], ...
 line([coded_limit coded_limit], [ymin 1e-3], ...
     'color', [0.5 0 1], 'linestyle', '--')
 title('BPSK over AWGN Channel')
-xlim([ebno_coded(1) ebno_coded(end)])
+xlim([ebno(1) ebno(end)])
 ylim([ymin .5])
 xlabel('Eb/N0 (dB)')
 ylabel('BER')
 %ylim([1e-5 1e-1])
-legend('simulation','theory', ...
+legend('simulation','theory, uncoded', ...
     'abs. Shannon limit', 'Shannon limit, rate: '+string(rate))
 grid on
 
