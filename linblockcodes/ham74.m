@@ -5,9 +5,9 @@
 close all; clear all
 
 M = 2; % constellation order, BPSK
-num_run = 1; % number of runs
+num_run = 10; % number of runs
 num_sym = 5e5; % number of symbols
-snr_vec = 1:16; % SNR points
+snr_vec = 1:20; % SNR points
 ber_coded   = zeros(size(snr_vec));
 
 m = 3;
@@ -19,6 +19,7 @@ rate = k/n;
 Q = [1 0 1 1; 1 1 1 0; 0 1 1 1];
 H = [eye(3) Q];
 G = [Q' eye(4)];
+GG = [zeros(size(Q))' eye(4)];
 
 pad = zeros(k - mod(num_sym, k), 1);
 
@@ -43,7 +44,8 @@ for ii=1:num_run
     S = mod(H*y_enc, 2);
     E = e(S);
     y_hat = mod(y_enc + E, 2);
-    x_hat = reshape( y_hat(k:end,:), [], 1 );
+    %x_hat = reshape( y_hat(k:end,:), [], 1 );
+    x_hat = reshape( [zeros(k,m) eye(4)]*y_hat, [], 1 );
     
     ber_coded(jj) = ber_coded(jj) + sum( abs( x_hat-x ) )/length(x);
     fprintf(".");

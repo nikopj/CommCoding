@@ -5,9 +5,9 @@
 close all
 
 M = 2; % constellation order
-num_run = 1; % number of runs
-num_sym = 1e6; % number of symbols
-snr_vec = 0:2:20; % SNR points
+num_run = 10; % number of runs
+num_sym = 5e5; % number of symbols
+snr_vec = 1:1:20; % SNR points
 ber_coded = zeros(size(snr_vec)); % bit error rate vector
 
 global k 

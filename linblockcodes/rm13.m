@@ -5,10 +5,9 @@
 close all; clear all;
 
 M = 2; % constellation order, BPSK
-num_run = 1; % number of runs
+num_run = 10; % number of runs
 num_sym = 5e5; % number of symbols
-snr_vec = 1:2:20; % SNR points
-ber_uncoded = zeros(size(snr_vec)); % bit error rate vector
+snr_vec = 1:20; % SNR points
 ber_coded   = zeros(size(snr_vec));
 
 global m
