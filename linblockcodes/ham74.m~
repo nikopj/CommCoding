@@ -14,7 +14,6 @@ m = 3;
 global n
 n = 2^m-1;
 k = n - m;
-rate = k/n;
 
 Q = [1 0 1 1; 1 1 1 0; 0 1 1 1];
 H = [eye(3) Q];
@@ -36,7 +35,7 @@ for ii=1:num_run
   
   % performs experiment at each SNR
   for jj=1:length(snr_vec)
-    rx = tx + (1/rate)*10^(-snr_vec(jj)/20)*v;
+    rx = tx + 10^(-snr_vec(jj)/20)*v;
     % each coded word in columns
     y_enc  = reshape(real(rx)<0, n, []);
     % syndrom of each message in columns
@@ -53,9 +52,10 @@ end
 ber_coded = ber_coded/num_run;
 
 % theoretical ber
+rate = k/n;
 ebno = snr_vec - 10*log10(log2(M));
 ebno_coded = ebno + 10*log10(rate);
-ber_theory = qfunc( sqrt( 2*10.^(ebno_coded/10) ) );
+ber_theory = qfunc( sqrt( 2*10.^(ebno/10) ) );
 
 % shannon limit
 abs_limit = 10*log10( log(2) );
@@ -64,10 +64,10 @@ coded_limit = 10*log10( (2^rate -1)/rate);
 % plotting
 figure
 % bers
-semilogy(ebno_coded, ber_coded, '-bo', ... 
-    ebno_coded, ber_theory, 'r')
+semilogy(ebno, ber_coded, '-bo', ... 
+    ebno, ber_theory, 'r')
 % limits
-ymin = min(ber_coded(ber_coded~=0));
+ymin = min(ber_(ber_coded~=0));
 line([abs_limit abs_limit], [ymin 1e-3], ...
     'color', 'black', 'linestyle', '--')
 line([coded_limit coded_limit], [ymin 1e-3], ...
@@ -78,7 +78,7 @@ ylim([ymin .5])
 xlabel('Eb/N0 (dB)')
 ylabel('BER')
 %ylim([1e-5 1e-1])
-legend('simulation','theory', ...
+legend('simulation, rate: '+string(rate),'theory, rate: '+string(rate), ...
     'abs. Shannon limit', 'Shannon limit, rate: '+string(rate))
 grid on
 
