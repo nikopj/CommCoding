@@ -19,7 +19,6 @@ rate = k/n;
 Q = [1 0 1 1; 1 1 1 0; 0 1 1 1];
 H = [eye(3) Q];
 G = [Q' eye(4)];
-GG = [zeros(size(Q))' eye(4)];
 
 pad = zeros(k - mod(num_sym, k), 1);
 
@@ -44,8 +43,7 @@ for ii=1:num_run
     S = mod(H*y_enc, 2);
     E = e(S);
     y_hat = mod(y_enc + E, 2);
-    %x_hat = reshape( y_hat(k:end,:), [], 1 );
-    x_hat = reshape( [zeros(k,m) eye(4)]*y_hat, [], 1 );
+    x_hat = reshape( [zeros(k,m) eye(k)]*y_hat, [], 1 );
     
     ber_coded(jj) = ber_coded(jj) + sum( abs( x_hat-x ) )/length(x);
     fprintf(".");

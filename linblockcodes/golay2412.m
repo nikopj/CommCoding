@@ -5,9 +5,9 @@
 close all
 
 M = 2; % constellation order
-num_run = 10; % number of runs
+num_run = 5; % number of runs
 num_sym = 5e5; % number of symbols
-snr_vec = 1:1:20; % SNR points
+snr_vec = 0:20; % SNR points
 ber_coded = zeros(size(snr_vec)); % bit error rate vector
 
 global k 
@@ -16,7 +16,7 @@ global n
 n = 24;
 rate = k/n;
 
-p = [1 0 0 0 1 1 1 0 1 1 0 ];
+p = [1 0 0 0 1 1 1 0 1 1 0];
 global P
 P = zeros(11); P(1,:) = p;
 temp = zeros(size(p));
@@ -52,7 +52,7 @@ for ii=1:num_run
     S = mod(H*y_enc, 2);
     E = e(S);
     y_hat = mod(y_enc + E, 2);
-    x_hat = reshape( y_hat(k+1:end,:), [], 1 );
+    x_hat = reshape( [zeros(k,k) eye(k)]*y_hat, [], 1 );
     
     ber_coded(jj) = ber_coded(jj) + sum( abs( x_hat-x ) )/length(x);
     fprintf(".");
@@ -99,26 +99,26 @@ global P
     E = zeros(n, size(S,2));
     U = eye(k);
     for i=1:size(S,2)
-       s = S(:,i);
-       if sum(s) <= 3
-           E(:,i) = [s; zeros(k,1)];
+       s = S(:,i)';
+       if sum(s,2) <= 3
+           E(:,i) = [s zeros(1,k)]';
            continue;
        end
-       index = find( sum( mod( repmat(s,1,12) + P, 2) ) <= 2);
+       [index, ~] = find( sum( mod( repmat(s,12,1) + P, 2), 2) <= 2);
        if index
            ind = index(1);
-           E(:,i) = [mod( s+P(:,ind), 2 ) ; U(:,ind)];
+           E(:,i) = [mod( s+P(ind,:), 2 ) U(ind,:)]';
            continue;
        end
-       sP = P*s;
-       if sum( sum(sP) == [2,3] )
-           E(:,i) = [zeros(k,1); sP];
+       sP = s*P;
+       if sum( sum(sP) == 2 || sum(sP) == 3 )
+           E(:,i) = [zeros(1,k) sP]';
            continue;
        end
-       index = find( sum( mod( repmat(sP,1,12) + P, 2) ) == 2);
+       [index, ~] = find( sum( mod( repmat(sP,12,1) + P, 2), 2) == 2);
        if index
            ind = index(1);
-           E(:,i) = [U(:,ind) ; mod( s+P(:,ind), 2 )];
+           E(:,i) = [U(ind,:) mod( s+P(ind,:), 2 )]';
            continue;
        end
     end
