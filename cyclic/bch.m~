@@ -17,6 +17,8 @@ t = 2;
 n = 2^m-1;
 
 [G, H] = myBCHgen(m,t);
+% puts G in systematic form, G = [I P], where I is the kxk identity matrix
+G = mod(rref(G),2);
 k = size(G,1);
 rate = k/n;
 
@@ -94,13 +96,11 @@ grid on
 % error vector generator, able to take in a matrix of syndromes
 % where each syndrome is a column of S
 function E = e(S, ygf_enc, m, t)
-FIELD = gftuple([-1 : 2^m-2]', m);
+FIELD = gftuple([-1 : 2^M-2]', M,);
 alpha_vec = gf(2,m).^(1:2*t);
 % loop through the matricies 
 for i=find(sum(S,1))
     y = ygf_enc(:,i);
-    p = polyval(y,alpha_vec);
-    syndpols = FIELD(p.x,:);
     
 end
 end
