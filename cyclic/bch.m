@@ -1,35 +1,27 @@
-% BCH
-
 % Nikola Janjusevic
-% Boiler Plate Wireless Channel
-% BPSK, AWGN monte-carlo simulation
+% BCH, BPSK, AWGN monte-carlo simulation
 % plots BER vs. Eb/No with shannon theoretical blah
 close all; clear all;
 
 M = 2; % constellation order
-num_run = 1; % number of runs
-num_sym = 20; % number of symbols
-snr_vec = 0; % SNR points
+num_run = 10; % number of runs
+num_sym = 1e4; % number of symbols
+snr_vec = -2:8; % SNR points
 ber_coded = zeros(size(snr_vec)); % bit error rate vector
 
-m = 4;
-t = 2;
+% BCH defined by m, t
+m = 3;
+t = 1;
 n = 2^m-1;
 
 [G, H] = myBCHgen(m,t);
 k = size(G,1);
 rate = k/n;
 
-% msg = gf(randi([0 1],3,k),m);
-% Gg = gf(G,m);
-% Hg = gf(H,m);
-% v = msg*G;
-% r = v*H'
+% to save ber and ebno
+filename = 'bch_'+string(m)+'_'+string(t)
 
-%%
-
-pad = zeros(k - mod(num_sym, k), 1);
-
+pad = zeros(mod(k-num_sym, k), 1);
 % SIMULATION
 for ii=1:num_run
   % generate new data each run
@@ -44,14 +36,14 @@ for ii=1:num_run
   
   % performs experiment at each SNR
   for jj=1:length(snr_vec)
-    rx = tx + (1/rate)*10^(-snr_vec(jj)/20)*v;
+    rx = tx + 15^(-snr_vec(jj)/20)*v;
     % each coded word in columns
     y_enc  = reshape(real(rx)<0, n, []);
     % need to reverse for right order in galois field polynomial
     ygf_enc = gf( flipud(y_enc), m ); 
     % syndrom of each message in columns
     S = mod(H*y_enc, 2);
-    E = e(S, ygf_enc, m, t);
+    E = myBCHerror(S, ygf_enc, m, t);
     y_hat = mod(y_enc + E, 2);
     x_hat = reshape( [eye(k) zeros(k,n-k)]*y_hat, [], 1 );
     
@@ -63,7 +55,7 @@ end
 ber_coded = ber_coded/num_run
 
 % theoretical ber
-ebno = snr_vec - 10*log10(log2(M)) + 10*log10(rate);
+ebno = snr_vec - 10*log10(log2(M)); %+ 10*log10(rate);
 ber_theory = qfunc( sqrt( 2*10.^(ebno/10) ) );
 
 % shannon limit
@@ -91,24 +83,4 @@ legend('simulation','theory, uncoded', ...
     'abs. Shannon limit', 'Shannon limit, rate: '+string(rate))
 grid on
 
-% error vector generator, able to take in a matrix of syndromes
-% where each syndrome is a column of S
-function E = e(S, ygf_enc, m, t)
-FIELD = gftuple([-1 : 2^m-2]', m);
-alpha_vec = gf(2,m).^(1:2*t);
-% loop through the matricies 
-for i=find(sum(S,1))
-    y = ygf_enc(:,i);
-    p = polyval(y,alpha_vec);
-    syndpols = FIELD(p.x,:);
-    
-end
-end
-
-
-
-
-
-
-
-
+save(filename,'-ascii','-double','ber_coded','ebno')
