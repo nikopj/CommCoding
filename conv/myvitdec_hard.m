@@ -28,11 +28,16 @@ for ii=1:size(y,2)
         % find all possible conditions for entering the current state,
         % jj, where I are the previous states, and J are the inputs
         [I,J] = find( states==(jj-1) );
-        metrics = -inf(num_in,1);
-        for kk=1:length(I)
-            out = de2bi( outputs(I(kk),J(kk)), log2(num_out), 'left-msb' )';
-            metrics(kk) = sum(~xor(out,y(:,ii)));
-        end
+        % metrics = -inf(num_in,1);
+%         for kk=1:length(I)
+%             out = de2bi( outputs(I(kk),J(kk)), log2(num_out), 'left-msb' )';
+%             metrics(kk) = sum(~xor(out,y(:,ii)));
+%         end
+        OUT = outputs(I,J); OUT = OUT(:,1);
+        out = de2bi(OUT,log2(num_out),'left-msb')';
+        yy = repmat(y(:,ii),1,size(out,2));
+        metrics = sum(~xor(out,yy),1)';
+       
         % find survivor branch
         [~,K] = max(br_metric(I) + metrics);
         % add to branch metric
