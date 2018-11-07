@@ -1,20 +1,21 @@
 % Nikola Janjusevic
-% Viterbi Decoding, Hard and Soft
+% Boiler Plate Wireless Channel
+% BPSK, AWGN monte-carlo simulation
+% plots BER vs. Eb/No with shannon theoretical blah
 close all, clear all;
 
 PLOT = 0;
+filename = 'vit_soft_23.mat';
 
 M = 2; % constellation order
-num_run = 500; % number of runs
+num_run = 1; % number of runs
 num_sym = 1e3; % number of symbols
-snr_vec = -5:1:10; % SNR points
+snr_vec = -5:2:10; % SNR points
 
 for rate = [1/3 1/2 2/3]
-% number of bits for quantization, 1bit is hard decoding
-for num_bits = [1 2 3]
+    for num_bits = [1 2 3]
 ber_vec = zeros(size(snr_vec)); % bit error rate vector
-[N,D] = rat(rate);
-filename = 'vit_r'+string(N)+string(D)+'_b'+string(num_bits)+'.mat'
+filename = 'vit_'+str(rate)+'_b'+str(num_soft_bits
 
 % pre-chosen trellis from Wicker
 if rate==1/3
@@ -49,13 +50,14 @@ for ii=1:num_run
     y = real(rx);
     % cheating by using actual SNR for soft-dec pdfs,
     % could estimate SNR from data, not the purpose of this excercise
-    x_hat = myvitdec_soft(y,trellis,num_bits,snr_vec(jj),1,1);
+    x_hat = myvitdec_soft(y,trellis,num_soft_bits,snr_vec(jj),1,1);
+    end
     ber_vec(jj) = ber_vec(jj) + biterr(x,x_hat')/num_sym;
     fprintf(".");
   end
   fprintf(",\n");
 end
-ber_vec = ber_vec/num_run;
+ber_vec = ber_vec/num_run
 
 if(PLOT)
 % theoretical ber

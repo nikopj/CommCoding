@@ -1,8 +1,10 @@
-function x_hat = myvitdec_hard(y,trellis,init_state,final_state)
+function x_hat = myvitdec_soft(y,trellis,num_bits,SNR,init_state,final_state)
 % y, encoded bits 
 % trellis, poly2trellis object
 % init_state, number in [0 trellis.numStates-1]
 % tbb_length, trace back buffer length
+
+% ASSUMING BPSK @ +/-1!!!!
 
 num_st = trellis.numStates; % NOT related to code rate k/n
 num_in = trellis.numInputSymbols; % NOT related to code rate k/n
@@ -26,6 +28,28 @@ br_metric(init_state) = 0;
 y = reshape(y,log2(num_out),[]);
 tb_buffer = nan(num_st,size(y,2));
 
+% soft_decoding stuff
+range = 0.8*[min(y) max(y)];
+M = nan(2,2^num_bits);
+r = linspace(range(1),range(2),2^num_bits+1);
+sig = 10^(-SNR/20);
+for ii=[1 2]
+    % mean of bpsk pdf
+    mu = -2*(ii-1)+1;
+    for jj=1:(2^num_bits)
+        % integrating probability in small section
+        % Q(min) - Q(max)
+        M(ii,jj) = log(qfunc((r(jj)-mu)/sig) - qfunc((r(jj+1)-mu)/sig));
+    end
+end
+
+% quantize bits
+y_quant = nan(size(y));
+for ii=1:size(y,2)
+    y_quant = sum(y(:,ii)>r(1:end-1),2);
+end
+y_quant(y_quant==0) = 1;
+
 for ii=1:size(y,2)
     br_temp = -inf(size(br_metric));
     tb_temp = nan(size(tb_buffer));
@@ -34,8 +58,10 @@ for ii=1:size(y,2)
         % jj, where I are the previous states, and J are the inputs
         [I,J] = find( states==(jj-1) );
         metrics = -inf(num_in,1);
+        % for number of entering branches
         for kk=1:length(I)
             out = reshape(bin_outs(I(kk),J(kk),:), [],1);
+            y_met = diag(M(out+1,y_quant(:,ii)));
             metrics(kk) = sum(~xor(out,y(:,ii)));
         end       
         % find survivor branch
