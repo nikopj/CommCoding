@@ -5,11 +5,11 @@ close all, clear all;
 PLOT = 0;
 
 M = 2; % constellation order
-num_run = 500; % number of runs
+num_run = 25; % number of runs
 num_sym = 1e3; % number of symbols
-snr_vec = -5:1:10; % SNR points
+snr_vec = -5:1:5; % SNR points
 
-for rate = [1/3 1/2 2/3]
+for rate = [2/3]
 % number of bits for quantization, 1bit is hard decoding
 for num_bits = [1 2 3]
 ber_vec = zeros(size(snr_vec)); % bit error rate vector
