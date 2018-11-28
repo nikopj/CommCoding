@@ -1,4 +1,4 @@
-function x_hat = myvitdec_soft(y,trellis,num_bits,SNR,init_state,final_state)
+function x_hat = mymap_dec(y,trellis,num_bits,SNR,init_state,final_state)
 % y, encoded bits 
 % trellis, poly2trellis object
 % init_state, number in [0 trellis.numStates-1]
@@ -29,7 +29,7 @@ y = reshape(y,log2(num_out),[]);
 tb_buffer = nan(num_st,size(y,2));
 
 % soft_decoding stuff
-range = 0.8*[min(y) max(y)];
+range = 0.8*[min(min(y)) max(max(y))];
 M = nan(2,2^num_bits);
 r = linspace(range(1),range(2),2^num_bits+1);
 sig = 10^(-SNR/20);
@@ -46,7 +46,7 @@ end
 % quantize bits
 y_quant = nan(size(y));
 for ii=1:size(y,2)
-    y_quant = sum(y(:,ii)>r(1:end-1),2);
+    y_quant(:,ii) = sum(y(:,ii)>r(1:end-1),2);
 end
 y_quant(y_quant==0) = 1;
 
@@ -61,8 +61,10 @@ for ii=1:size(y,2)
         % for number of entering branches
         for kk=1:length(I)
             out = reshape(bin_outs(I(kk),J(kk),:), [],1);
-            y_met = diag(M(out+1,y_quant(:,ii)));
-            metrics(kk) = sum(~xor(out,y(:,ii)));
+            % lookup-table of conditional metrics in M, 
+            % take diagonal for matlab reasons,
+            % sum the metrics for the word
+            metrics(kk) = sum(diag(M(out+1,y_quant(:,ii))));
         end       
         % find survivor branch
         [~,K] = max(br_metric(I) + metrics);
