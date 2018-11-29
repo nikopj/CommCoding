@@ -22,11 +22,10 @@ end
 
 % starting at init_state, so all other branch metrics 
 % are weighed infinitely negatively
-br_metric = -inf(num_st,1);
-br_metric(init_state) = 0;
-
 y = reshape(y,log2(num_out),[]);
-tb_buffer = nan(num_st,size(y,2));
+alpha
+beta
+gamma
 
 % soft_decoding stuff
 range = 0.8*[min(min(y)) max(max(y))];

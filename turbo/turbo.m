@@ -11,14 +11,50 @@ snr_vec = -5:1:5; % SNR points
 
 n = 2;
 k = 1;
+m = 5;
 rate = k/n;
+
+trellis = poly2trellis(m,[31,27],31);
+msg = randi([0 1], 10, 1);
+[y final_state] = convenc(msg,trellis);
+tail=y(end-1:end);
+
+% forcing the RSCC to the zero state
+% mask is the feedback path connections
+mask = de2bi(oct2dec(31),m); mask = mask(1:end-1);
+for ii=1:(m-1)
+    % trellis state in binary
+    bstate = de2bi(final_state,m-1);
+    % xor'd feedback path in binary, fed into encoder input
+    in = mod(sum(mask.*bstate),2);
+    [tail,final_state] = convenc(in,trellis,final_state);
+    y = [y; tail'];
+end
+% total of 2*(m-1) tailbits appended
+final_state
+
+N = num_symbols;
+num_states = trellis.numStates; % NOT related to code rate k/n
+num_in = trellis.numInputSymbols; % NOT related to code rate k/n
+num_out= trellis.numOutputSymbols;
+% map decoding
+alpha = nan(num_states,1); alpha(0) = 1;
+beta = nan(num_states,1); beta(0) = 0;
+gamma = nan(num_states,num_states);
+Le = zeros(N,1);
+
+y = reshape(y,2,[]);
+for k=1:N
+   yk = y(:,k); yks = yk(1); ykp = yk(2:end);
+   0
+end
+
+
+
+
+%%
+
 ber_vec = zeros(size(snr_vec)); % bit error rate vector
-[N,D] = rat(rate);
-filename = 'vit_r'+string(N)+string(D)+'_b'+string(num_bits)+'.mat'
-
-trellis = poly2trellis(5,[31,27],31);
-
-
 % SIMULATION
 for ii=1:num_run
   % generate new data each run
