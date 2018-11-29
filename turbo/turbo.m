@@ -16,8 +16,8 @@ rate = k/n;
 
 trellis = poly2trellis(m,[31,27],31);
 msg = randi([0 1], 10, 1);
-[y final_state] = convenc(msg,trellis);
-tail=y(end-1:end);
+[x final_state] = convenc(msg,trellis);
+tail=x(end-1:end);
 
 % forcing the RSCC to the zero state
 % mask is the feedback path connections
@@ -28,27 +28,83 @@ for ii=1:(m-1)
     % xor'd feedback path in binary, fed into encoder input
     in = mod(sum(mask.*bstate),2);
     [tail,final_state] = convenc(in,trellis,final_state);
-    y = [y; tail'];
+    x = [x; tail'];
 end
 % total of 2*(m-1) tailbits appended
 final_state
 
-N = num_symbols;
-num_states = trellis.numStates; % NOT related to code rate k/n
-num_in = trellis.numInputSymbols; % NOT related to code rate k/n
+tx = -2*x+1;
+rx = tx;
+
+N = num_sym;
+num_states = trellis.numStates;
+num_in = trellis.numInputSymbols; 
 num_out= trellis.numOutputSymbols;
 % map decoding
-alpha = nan(num_states,1); alpha(0) = 1;
-beta = nan(num_states,1); beta(0) = 0;
+S = trellis.nextStates; S_minus=S(:,2); S_plus=S(:,1);
+% alpha and beta are really alpha,beta tilda
+alpha = zeros(num_states,1); alpha(1) = 1;
+beta = zeros(num_states,1); beta(1) = 0;
 gamma = nan(num_states,num_states);
+gamma_e = nan(num_states,num_states);
 Le = zeros(N,1);
+snr = 20; %db
+Lc = 10^(snr/10)*8;
 
-y = reshape(y,2,[]);
+% parity bit generation
+x_parity = nan(num_states,num_states);
+uk = nan(num_states,num_states);
+for ii=1:num_states
+    for input=1:num_in
+        enc = de2bi(trellis.outputs(ii,input),log2(num_out),'left-msb');
+        par = bi2de(enc(2:end));
+        jj  = S(ii,input)+1;
+        x_parity(ii,jj) = par;
+        % input value to the encoder
+        uk(ii,jj) = -2*(input-1)+1;
+    end
+end
+x_parity = -2*x_parity+1;
+% valid transitions from one state to the next
+[s_prime,s]=find(isnan(x_parity)==1);
+%%
+y = reshape(rx,2,[]);
 for k=1:N
    yk = y(:,k); yks = yk(1); ykp = yk(2:end);
-   0
+   % compute gammas
+   for t=1:length(s)
+       xkp = x_parity(s_prime(t),s);
+       u   = uk(s_prime(t),s(t)); 
+       gamma_e(s_prime(t),s(t))   = exp(0.5*Lc*ykp*xkp);
+       gamma(s_prime(t),s(t))   = exp(0.5*u*(Le+Lc*yks))*gamma_e(s_prime(t),s(t));
+   end
+   % compute alphas
+   % numerator is single sum over primes, denominator is double
+   % sum over primed and unprimed
+   den = 0;
+   for t=1:length(s)
+       num=0;
+       for tp=1:length(s_prime)
+           num = num + alpha(tp)*gamma(tp,t);
+           den = den + alpha(tp)*gamma(tp,t);
+       end
+       alpha(t) = num;
+   end
+   alpha = alpha/den;
 end
-
+% betas betas betas
+for k=N:-1:2
+    den = 0;
+    for tp=1:length(s_prime)
+       num=0;
+       for t=1:length(s)
+           num = num + beta(t)*gamma(tp,t);
+           den = den + alpha(tp)*gamma(tp,t);
+       end
+       beta(t) = num;
+    end
+    alpha = alpha/den;
+end
 
 
 
@@ -71,10 +127,10 @@ for ii=1:num_run
   % performs experiment at each SNR
   for jj=1:length(snr_vec)
     rx = tx + 10^(-snr_vec(jj)/20)*v;
-    y = real(rx);
+    x = real(rx);
     % cheating by using actual SNR for soft-dec pdfs,
     % could estimate SNR from data, not the purpose of this excercise
-    x_hat = myvitdec_soft(y,trellis,num_bits,snr_vec(jj),1,1);
+    x_hat = myvitdec_soft(x,trellis,num_bits,snr_vec(jj),1,1);
     ber_vec(jj) = ber_vec(jj) + biterr(x,x_hat')/num_sym;
     fprintf(".");
   end
