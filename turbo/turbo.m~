@@ -41,7 +41,7 @@ num_states = trellis.numStates;
 num_in = trellis.numInputSymbols; 
 num_out= trellis.numOutputSymbols;
 % map decoding
-S = trellis.nextStates+1; S_minus=S(:,2); S_plus=S(:,1);
+S = trellis.nextStates; S_minus=S(:,2); S_plus=S(:,1);
 % alpha and beta are really alpha,beta tilda
 alpha = zeros(N,num_states); alpha(1,1) = 1;
 beta = zeros(N,num_states); beta(N,1) = 0;
@@ -58,7 +58,7 @@ for ii=1:num_states
     for input=1:num_in
         enc = de2bi(trellis.outputs(ii,input),log2(num_out),'left-msb');
         par = bi2de(enc(2:end));
-        jj  = S(ii,input);
+        jj  = S(ii,input)+1;
         x_parity(ii,jj) = par;
         % input value to the encoder
         uk(ii,jj) = -2*(input-1)+1;
@@ -66,17 +66,17 @@ for ii=1:num_states
 end
 x_parity = -2*x_parity+1;
 % valid transitions from one state to the next
-[sp,s]=find(isnan(x_parity)==0);
+[s_prime,s]=find(isnan(x_parity)==0);
 %%
 y = reshape(rx,2,[]);
 for k=1:(N-1)
    yk = y(:,k); yks = yk(1); ykp = yk(2:end);
    % compute gammas
    for t=1:length(s)
-       xkp = x_parity(sp(t),s(t));
-       u   = uk(sp(t),s(t)); 
-       gamma_e(k,sp(t),s(t))   = exp(0.5*Lc*ykp*xkp);
-       gamma(k,sp(t),s(t))   = exp(0.5*u*(Le+Lc*yks))*gamma_e(k,sp(t),s(t));
+       xkp = x_parity(s_prime(t),s(t));
+       u   = uk(s_prime(t),s(t)); 
+       gamma_e(k,s_prime(t),s(t))   = exp(0.5*Lc*ykp*xkp);
+       gamma(k,s_prime(t),s(t))   = exp(0.5*u*(Le+Lc*yks))*gamma_e(k,s_prime(t),s(t));
    end
    % compute alphas
    % numerator is single sum over primes, denominator is double
@@ -84,18 +84,18 @@ for k=1:(N-1)
    den = 0;
    for t=1:length(s)
        num=0;
-       for tp=1:length(sp)
-           num = num + alpha(k,sp(tp))*gamma(k,sp(tp),s(t));
+       for tp=1:length(s_prime)
+           num = num + alpha(k,tp)*gamma(k,tp,t);
            den = den + alpha(k,tp)*gamma(k,tp,t);
        end
-       alpha(k+1,s(t)) = num;
+       alpha(k+1,t) = num;
    end
    alpha(k+1,:) = alpha(k,:)/den;
 end
 % betas betas betas
 for k=N:-1:2
     den = 0;
-    for tp=1:length(sp)
+    for tp=1:length(s_prime)
        num=0;
        for t=1:length(s)
            num = num + beta(k,t)*gamma(k,tp,t);
