@@ -41,7 +41,7 @@ num_out= trellis.numOutputSymbols;
 % S: state+input = next state
 % SP: state+input = prev. state
 S = trellis.nextStates+1; S_minus=S(:,2); S_plus=S(:,1);
-SP = nan(size(S));
+SP = zeros(size(S));
 for ii=1:num_states
     for jj=1:num_in
         SP(S(ii,jj),jj) = ii;
@@ -72,9 +72,9 @@ for ii=1:num_states
 end
 
 y = reshape(rx,2,[]);
-% GAMMA
-for k=1:(N+1)
-    yk = y(:,k); yks = yk(1); ykp = yk(2:end);
+for k=2:(N+1)
+    % GAMMA
+   yk = y(:,k); yks = yk(1); ykp = yk(2:end);
    for s=1:size(S,1)
        for sp=SP(s,1:num_in)
            xkp = x_parity(sp,s);
@@ -83,9 +83,7 @@ for k=1:(N+1)
            gamma(k,sp,s)   = exp(0.5*u*(Le(k)+Lc*yks))*gamma_e(k,sp,s);
        end
    end
-end
-% ALPHA
-for k=2:(N+1)
+   % ALPHA
    den = 0;
    for s=1:size(S,1)
        num=0;

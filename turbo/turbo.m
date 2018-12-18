@@ -1,145 +1,61 @@
 % Nikola Janjusevic
-% Viterbi Decoding, Hard and Soft
+% Turbo Coding
 close all, clear all;
 
 PLOT = 0;
+filename = 'turbo.mat'
 
 M = 2; % constellation order
-num_run = 25; % number of runs
-num_sym = 1e3; % number of symbols
-snr_vec = -5:1:5; % SNR points
+num_run = 1; % number of runs
+num_sym = 15; N = num_sym; % number of symbols
+snr_vec = 5; % SNR points
 
-n = 2;
+n = 3;
 k = 1;
-m = 5;
+m = 4;
 rate = k/n;
+% interleave stuff
+R=3;C=5;
+trellis = poly2trellis(m,[13,15,17],13);
+% decoding iterations
+l=4;
 
-trellis = poly2trellis(m,[31,27],31);
-msg = randi([0 1], 10, 1);
-[x,final_state] = convenc(msg,trellis);
-tail=x(end-1:end);
-
-% forcing the RSCC to the zero state
-% mask is the feedback path connections
-mask = de2bi(oct2dec(31),m); mask = mask(1:end-1);
-for ii=1:(m-1)
-    % trellis state in binary
-    bstate = de2bi(final_state,m-1);
-    % xor'd feedback path in binary, fed into encoder input
-    in = mod(sum(mask.*bstate),2);
-    [tail,final_state] = convenc(in,trellis,final_state);
-    x = [x; tail'];
-end
-% total of 2*(m-1) tailbits appended
-final_state
-
-tx = -2*x+1;
-rx = tx;
-
-N = num_sym;
-num_states = trellis.numStates;
-num_in = trellis.numInputSymbols; 
-num_out= trellis.numOutputSymbols;
-% map decoding
-S = trellis.nextStates+1; S_minus=S(:,2); S_plus=S(:,1);
-% alpha and beta are really alpha,beta tilda
-alpha = zeros(N,num_states); alpha(1,1) = 1;
-beta = zeros(N,num_states); beta(N,1) = 0;
-gamma = nan(N,num_states,num_states);
-gamma_e = nan(N,num_states,num_states);
-Le = zeros(N,1);
-snr = 20; %db
-Lc = 10^(snr/10)*8;
-
-% parity bit generation
-x_parity = nan(num_states,num_states);
-uk = nan(num_states,num_states);
-for ii=1:num_states
-    for input=1:num_in
-        enc = de2bi(trellis.outputs(ii,input),log2(num_out),'left-msb');
-        par = bi2de(enc(2:end));
-        jj  = S(ii,input);
-        x_parity(ii,jj) = par;
-        % input value to the encoder
-        uk(ii,jj) = -2*(input-1)+1;
-    end
-end
-x_parity = -2*x_parity+1;
-% valid transitions from one state to the next
-[sp,s]=find(isnan(x_parity)==0);
-%%
-y = reshape(rx,2,[]);
-for k=1:(N-1)
-   yk = y(:,k); yks = yk(1); ykp = yk(2:end);
-   % compute gammas
-   for t=1:length(s)
-       xkp = x_parity(sp(t),s(t));
-       u   = uk(sp(t),s(t)); 
-       gamma_e(k,sp(t),s(t))   = exp(0.5*Lc*ykp*xkp);
-       gamma(k,sp(t),s(t))   = exp(0.5*u*(Le+Lc*yks))*gamma_e(k,sp(t),s(t));
-   end
-   % compute alphas
-   % numerator is single sum over primes, denominator is double
-   % sum over primed and unprimed
-   den = 0;
-   for t=1:length(s)
-       num=0;
-       for tp=1:length(sp)
-           num = num + alpha(k,sp(tp))*gamma(k,sp(tp),s(t));
-           den = den + alpha(k,tp)*gamma(k,tp,t);
-       end
-       alpha(k+1,s(t)) = num;
-   end
-   alpha(k+1,:) = alpha(k,:)/den;
-end
-% betas betas betas
-for k=N:-1:2
-    den = 0;
-    for tp=1:length(sp)
-       num=0;
-       for t=1:length(s)
-           num = num + beta(k,t)*gamma(k,tp,t);
-           den = den + alpha(k-1,tp)*gamma(k,tp,t);
-       end
-       beta(k-1,t) = num;
-    end
-    beta(k-1,:) = beta(k-1,:)/den;
-end
-
-for k=1:N
-    num = 0;
-end
-
-%%
-
-ber_vec = zeros(size(snr_vec)); % bit error rate vector
 % SIMULATION
+ber_vec = zeros(size(snr_vec));
 for ii=1:num_run
-  % generate new data each run
-  x = randi([0,1],1,num_sym);
-  % pad and encode data, force to zero state
-  pad = zeros(1, mod(length(x)+max(K)+1,k));
-  x = [x pad zeros(1,max(K)+1)];
-  % encode
-  x_enc = convenc(x, trellis, 0);
-  % map to constellation (BPSK)
-  tx = -2*x_enc+1;
-  v = sqrt(1/2)*(randn(size(tx))+1j*randn(size(tx))); % cplx rnd noise
+    % generate new data each run & pad
+    msg = randi([0 1], num_sym, 1);
+    % encode
+    x1 = turbo_enc(msg,trellis,m); x1 = reshape(x1,n,[]);
+    % --- interleave ---
+    int_msg = rc_interleave(msg,R,C);
+    x2 = turbo_enc(int_msg',trellis,m); x2 = reshape(x2,n,[]);
+    x = [x1;x2(2:end,:)];
+    % map to constellation (BPSK)
+    tx = -2*x+1;
+    v = sqrt(1/2)*(randn(size(tx))+1j*randn(size(tx))); % cplx rnd noise
   
-  % performs experiment at each SNR
-  for jj=1:length(snr_vec)
-    rx = tx + 10^(-snr_vec(jj)/20)*v;
-    x = real(rx);
-    % cheating by using actual SNR for soft-dec pdfs,
-    % could estimate SNR from data, not the purpose of this excercise
-    x_hat = myvitdec_soft(x,trellis,num_bits,snr_vec(jj),1,1);
-    ber_vec(jj) = ber_vec(jj) + biterr(x,x_hat')/num_sym;
-    fprintf(".");
-  end
-  fprintf(",\n");
+    % performs experiment at each SNR
+    for jj=1:length(snr_vec)
+        rx = tx + 10^(-snr_vec(jj)/20)*v;
+        y = reshape(rx,5,[]); ys=y(1,1:N); yp1=y(2,:); yp2=y(4,:);
+        int_ys = rc_interleave(ys,R,C);
+        Lc = 2*rate*10^(snr_vec(1)/20); Le21 = zeros(N,1);
+        for iter=1:l
+            % --- D1 ---
+            Le12 = mapdec(ys,yp1,trellis,Lc,rc_deinterleave(Le21,R,C),N);
+            % --- D2 ---
+            Le21 = mapdec(int_ys,yp2,trellis,Lc,rc_interleave(Le12,R,C),N);
+        end
+        L1 = Lc*ys + rc_deinterleave(Le21,R,C) + Le12';
+        msg_hat = L1<0;
+        ber_vec(jj) = ber_vec(jj) + biterr(msg,msg_hat')/length(msg);
+        fprintf(".");
+    end
+    fprintf(",\n");
 end
-ber_vec = ber_vec/num_run;
-
+ber_vec = ber_vec/num_run
+rate = 1/2;
 if(PLOT)
 % theoretical ber
 ber_theory = qfunc( sqrt( 2*10.^(snr_vec/10) ) );
@@ -169,3 +85,5 @@ legend('simulation','theory, uncoded', ...
     'abs. Shannon limit', 'Shannon limit, rate: '+string(rate))
 grid on
 end
+
+save(filename,'-mat','-double','ber_vec','snr_vec')
